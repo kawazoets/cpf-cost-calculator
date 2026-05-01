@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CPF Cost Calculator Singapore</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-bottom: 6px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin-top: 22px;
+      width: 100%;
+      padding: 14px;
+      font-size: 17px;
+      background: #1f4e79;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #163a5c;
+    }
+
+    .results {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: #f8fafc;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1px solid #e1e5ea;
+    }
+
+    .card strong {
+      display: block;
+      color: #555;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .value {
+      font-size: 22px;
+      font-weight: bold;
+      color: #1f4e79;
+    }
+
+    .highlight {
+      background: #eef6ff;
+      border: 2px solid #1f4e79;
+    }
+
+    .note {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: #b00020;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .results {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>CPF Cost Calculator Singapore</h1>
+    <p class="subtitle">
+      Quick estimate of monthly CPF burden and total employer cost for Singapore employment.
+    </p>
+
+    <label for="employeeType">Employee Type</label>
+    <select id="employeeType">
+      <option value="full">Singapore Citizen / SPR Full Rate</option>
+    </select>
+
+    <label for="ageBand">Age Band</label>
+    <select id="ageBand">
+      <option value="55_below">55 & below</option>
+      <option value="55_60">Above 55 to 60</option>
+      <option value="60_65">Above 60 to 65</option>
+      <option value="65_70">Above 65 to 70</option>
+      <option value="above_70">Above 70</option>
+    </select>
+
+    <label for="salary">Gross Monthly Salary SGD</label>
+    <input type="number" id="salary" placeholder="Example: 5000" min="0" />
+
+    <button onclick="calculateCPF()">Calculate</button>
+
+    <div id="error" class="error"></div>
+
+    <div class="results">
+      <div class="card">
+        <strong>Salary Subject to CPF</strong>
+        <div class="value" id="cpfSalary">S$0</div>
+      </div>
+
+      <div class="card">
+        <strong>Employee CPF</strong>
+        <div class="value" id="employeeCPF">S$0</div>
+      </div>
+
+      <div class="card">
+        <strong>Employer CPF</strong>
+        <div class="value" id="employerCPF">S$0</div>
+      </div>
+
+      <div class="card">
+        <strong>Total CPF</strong>
+        <div class="value" id="totalCPF">S$0</div>
+      </div>
+
+      <div class="card">
+        <strong>Estimated Net Pay</strong>
+        <div class="value" id="netPay">S$0</div>
+      </div>
+
+      <div class="card highlight">
+        <strong>Total Employer Cost</strong>
+        <div class="value" id="totalCost">S$0</div>
+      </div>
+    </div>
+
+    <p class="note">
+      This tool provides an estimate based on 2026 CPF rates for Singapore Citizens and SPRs on full rates.
+      It covers Monthly Ordinary Wage only. It does not include bonus, Additional Wage ceiling, SPR graduated rates,
+      partial month salary, or special cases. Please verify with CPF Board or your payroll provider before official payroll processing.
+    </p>
+  </div>
+
+  <script>
+    const OW_CEILING_2026 = 8000;
+
+    const CPF_RATES_2026 = {
+      "55_below": {
+        employer: 0.17,
+        employee: 0.20
+      },
+      "55_60": {
+        employer: 0.16,
+        employee: 0.18
+      },
+      "60_65": {
+        employer: 0.125,
+        employee: 0.125
+      },
+      "65_70": {
+        employer: 0.09,
+        employee: 0.075
+      },
+      "above_70": {
+        employer: 0.075,
+        employee: 0.05
+      }
+    };
+
+    function formatCurrency(amount) {
+      return "S$" + amount.toLocaleString("en-SG");
+    }
+
+    function calculateCPF() {
+      const salaryInput = document.getElementById("salary").value;
+      const ageBand = document.getElementById("ageBand").value;
+      const errorBox = document.getElementById("error");
+
+      errorBox.textContent = "";
+
+      if (salaryInput === "") {
+        errorBox.textContent = "Please enter monthly salary.";
+        return;
+      }
+
+      const grossSalary = Number(salaryInput);
+
+      if (isNaN(grossSalary)) {
+        errorBox.textContent = "Please enter numeric value only.";
+        return;
+      }
+
+      if (grossSalary < 0) {
+        errorBox.textContent = "Salary must be 0 or above.";
+        return;
+      }
+
+      const cpfSalary = Math.min(grossSalary, OW_CEILING_2026);
+      const rates = CPF_RATES_2026[ageBand];
+
+      const totalCPF = Math.round(cpfSalary * (rates.employer + rates.employee));
+      const employeeCPF = Math.floor(cpfSalary * rates.employee);
+      const employerCPF = totalCPF - employeeCPF;
+
+      const netPay = grossSalary - employeeCPF;
+      const totalEmployerCost = grossSalary + employerCPF;
+
+      document.getElementById("cpfSalary").textContent = formatCurrency(cpfSalary);
+      document.getElementById("employeeCPF").textContent = formatCurrency(employeeCPF);
+      document.getElementById("employerCPF").textContent = formatCurrency(employerCPF);
+      document.getElementById("totalCPF").textContent = formatCurrency(totalCPF);
+      document.getElementById("netPay").textContent = formatCurrency(netPay);
+      document.getElementById("totalCost").textContent = formatCurrency(totalEmployerCost);
+    }
+  </script>
+</body>
+</html>
